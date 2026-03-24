@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>美股板块</title>
+  <style>
+    :root {
+      --bg: #071018;
+      --bg2: #102234;
+      --panel: rgba(8, 21, 35, 0.8);
+      --panel-strong: rgba(13, 29, 48, 0.94);
+      --line: rgba(164, 197, 255, 0.14);
+      --text: #f3f7fd;
+      --muted: #99adc8;
+      --gold: #ffd38a;
+      --pos: #68d7a8;
+      --neg: #ff8080;
+      --blue: #8ab2ff;
+      --teal: #72d4e4;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255, 166, 117, 0.18), transparent 26%),
+        radial-gradient(circle at top right, rgba(114, 212, 228, 0.18), transparent 30%),
+        radial-gradient(circle at 50% 0%, rgba(138, 178, 255, 0.15), transparent 38%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+    }
+
+    .shell {
+      width: min(1240px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .hero, .panel, .card, .status {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.55fr 0.95fr;
+      gap: 24px;
+      padding: 30px;
+      margin-bottom: 20px;
+      background:
+        linear-gradient(135deg, rgba(255, 211, 138, 0.08), transparent 34%),
+        linear-gradient(180deg, rgba(13, 29, 48, 0.92), rgba(8, 21, 35, 0.82));
+    }
+
+    .eyebrow, .kicker {
+      margin: 0 0 10px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    h1, h2 { margin: 0; }
+    h1 {
+      font-size: clamp(34px, 5vw, 60px);
+      line-height: 0.98;
+      max-width: 8ch;
+      letter-spacing: -0.04em;
+    }
+
+    h2 { font-size: 24px; letter-spacing: -0.02em; }
+
+    .copy, .meta, .hint, .status, th { color: var(--muted); }
+    .copy { line-height: 1.8; max-width: 54ch; margin: 16px 0 0; font-size: 15px; }
+
+    .hero-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .hero-note::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--gold), #ff9957);
+      box-shadow: 0 0 14px rgba(255, 211, 138, 0.7);
+    }
+
+    .filters {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .view-switch {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      margin-top: 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .view-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      font-weight: 700;
+    }
+
+    .view-btn.active {
+      background: linear-gradient(135deg, rgba(255, 211, 138, 0.16), rgba(138, 178, 255, 0.14));
+      color: var(--text);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    label { display: grid; gap: 7px; font-size: 14px; color: var(--muted); }
+    input, button {
+      border: 0;
+      border-radius: 16px;
+      font: inherit;
+    }
+
+    input {
+      padding: 13px 14px;
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    button {
+      cursor: pointer;
+      padding: 11px 14px;
+      transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    .ghost {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .ghost:hover { background: rgba(255,255,255,0.08); }
+    .primary {
+      background: linear-gradient(135deg, #ffd38a, #ff9957);
+      color: #09111d;
+      font-weight: 800;
+      padding-inline: 18px;
+    }
+
+    .cards, .row {
+      display: grid;
+      gap: 16px;
+    }
+    .cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .card {
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    }
+    .card p, .card strong, .card span { display: block; }
+    .card p { margin: 0 0 8px; }
+    .card strong { font-size: 23px; margin-bottom: 8px; letter-spacing: -0.03em; }
+    .pos { color: var(--pos); }
+    .neg { color: var(--neg); }
+
+    .row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .panel {
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(13, 29, 48, 0.92), rgba(8, 21, 35, 0.84));
+    }
+    .head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .chart {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 78px;
+      gap: 12px;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .track {
+      position: relative;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+
+    .fill {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      border-radius: 999px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 13px 10px;
+      border-bottom: 1px solid rgba(180,205,255,0.09);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    .pill {
+      display: inline-flex;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-weight: 700;
+      color: #09111d;
+    }
+
+    .spark { width: 110px; height: 28px; }
+    .status {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.04);
+    }
+    .small { font-size: 13px; }
+
+    .period-label {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    @media (max-width: 980px) {
+      .hero, .cards, .row { grid-template-columns: 1fr; }
+      .head { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Sector Pulse</p>
+        <h1>美股板块</h1>
+        <p class="copy">一个更轻、更直接的板块看板。聚焦区间涨跌、资金冷热和成交强弱，适合快速看轮动，而不是翻很多标签页。</p>
+        <div class="hero-note">本地数据版 · 双击即可打开</div>
+        <div class="view-switch" id="viewSwitch">
+          <button type="button" class="view-btn active" data-view="overview">总览</button>
+          <button type="button" class="view-btn" data-view="detail">细分</button>
+        </div>
+      </div>
+      <form id="filters" class="filters">
+        <label>
+          <span>开始日期</span>
+          <input id="startDate" type="date" required>
+        </label>
+        <label>
+          <span>结束日期</span>
+          <input id="endDate" type="date" required>
+        </label>
+        <div class="actions">
+          <button type="button" class="ghost" data-days="7">7天</button>
+          <button type="button" class="ghost" data-days="14">14天</button>
+          <button type="button" class="ghost" data-days="30">近30天</button>
+          <button type="button" class="ghost" data-days="90">近90天</button>
+          <button type="button" class="ghost" data-days="180">近180天</button>
+          <button type="submit" class="primary">刷新看板</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="cards" id="cards"></section>
+
+    <section class="row">
+      <article class="panel">
+        <div class="head">
+          <div>
+            <p class="kicker">Return</p>
+            <h2 id="perfTitle">涨跌分布</h2>
+          </div>
+          <div id="rangeText" class="meta period-label"></div>
+        </div>
+        <div id="perfChart" class="chart"></div>
+      </article>
+
+      <article class="panel">
+        <div class="head">
+          <div>
+            <p class="kicker">Flow</p>
+            <h2 id="flowTitle">资金冷热</h2>
+          </div>
+          <div class="meta">单位：百万美元</div>
+        </div>
+        <div id="flowChart" class="chart"></div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="head">
+        <div>
+          <p class="kicker">Table</p>
+          <h2 id="tableTitle">板块明细</h2>
+        </div>
+        <div class="meta small">资金流为基于公开 OHLCV 数据的代理指标，不等同于 ETF 官方真实申赎流量。</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ETF</th>
+              <th>板块</th>
+              <th>涨幅</th>
+              <th>净流向代理</th>
+              <th>流向强度</th>
+              <th>日均成交额</th>
+              <th>最新量比</th>
+              <th>价格轨迹</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="status" class="status">正在加载数据...</section>
+  </main>
+
+  <script src="./sector_data.js"></script>
+  <script>
+    const OVERVIEW = {
+      XLC: { name: "Communication Services", color: "#ff8a4c" },
+      XLY: { name: "Consumer Discretionary", color: "#ffb347" },
+      XLP: { name: "Consumer Staples", color: "#f6d365" },
+      XLE: { name: "Energy", color: "#ff6b6b" },
+      XLF: { name: "Financials", color: "#ffd166" },
+      XLV: { name: "Health Care", color: "#4ecdc4" },
+      XLI: { name: "Industrials", color: "#5dade2" },
+      XLB: { name: "Materials", color: "#48c78e" },
+      XLRE: { name: "Real Estate", color: "#b784f7" },
+      XLK: { name: "Technology", color: "#6c8cff" },
+      XLU: { name: "Utilities", color: "#7f8c8d" },
+    };
+
+    const DETAIL = {
+      SMH: { name: "Semiconductors", color: "#5fa8ff" },
+      IGV: { name: "Software", color: "#72d4e4" },
+      XBI: { name: "Biotech", color: "#4ecdc4" },
+      IHI: { name: "Medical Devices", color: "#7bd389" },
+      KRE: { name: "Regional Banks", color: "#ffd166" },
+      KIE: { name: "Insurance", color: "#f7b267" },
+      XRT: { name: "Retail", color: "#ff9f6e" },
+      ITB: { name: "Homebuilders", color: "#c084fc" },
+      IYT: { name: "Transportation", color: "#8e9cff" },
+      ICLN: { name: "Clean Energy", color: "#4dd599" },
+    };
+
+    const VIEWS = {
+      overview: {
+        label: "总览",
+        title: "板块明细",
+        perfTitle: "涨跌分布",
+        flowTitle: "资金冷热",
+        groups: OVERVIEW,
+      },
+      detail: {
+        label: "细分",
+        title: "细分行业明细",
+        perfTitle: "细分涨跌分布",
+        flowTitle: "细分资金冷热",
+        groups: DETAIL,
+      },
+    };
+
+    let currentView = "overview";
+
+    function fmtPct(v) {
+      const sign = v > 0 ? "+" : "";
+      return `${sign}${v.toFixed(2)}%`;
+    }
+
+    function fmtM(v) {
+      return `${(v / 1e6).toFixed(1)}M`;
+    }
+
+    function fmtB(v) {
+      return `${(v / 1e9).toFixed(2)}B`;
+    }
+
+    function daysAgo(days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function setStatus(text, isError = false) {
+      const el = document.getElementById("status");
+      el.textContent = text;
+      el.style.color = isError ? "#ffd0d0" : "#9eb2d2";
+    }
+
+    function spark(values, color) {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const span = max - min || 1;
+      const pts = values.map((v, i) => {
+        const x = (i / Math.max(values.length - 1, 1)) * 100;
+        const y = 24 - ((v - min) / span) * 20;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      }).join(" ");
+      return `<svg viewBox="0 0 100 28" class="spark" preserveAspectRatio="none"><polyline fill="none" stroke="${color}" stroke-width="3" points="${pts}" /></svg>`;
+    }
+
+    function moneyFlowMetrics(rows) {
+      let netFlow = 0;
+      let totalDollarVolume = 0;
+      let totalVolume = 0;
+
+      rows.forEach((row) => {
+        const typical = (row.high + row.low + row.close) / 3;
+        const spread = row.high - row.low;
+        const multiplier = spread === 0 ? 0 : (((row.close - row.low) - (row.high - row.close)) / spread);
+        const rawFlow = typical * row.volume * multiplier;
+        const dollarVolume = typical * row.volume;
+        netFlow += rawFlow;
+        totalDollarVolume += dollarVolume;
+        totalVolume += row.volume;
+      });
+
+      const avgDollarVolume = rows.length ? totalDollarVolume / rows.length : 0;
+      return {
+        netFlow,
+        totalDollarVolume,
+        flowIntensity: totalDollarVolume ? (netFlow / totalDollarVolume) * 100 : 0,
+        avgDollarVolume,
+        cmfProxy: totalVolume ? netFlow / totalVolume : 0,
+      };
+    }
+
+    function getActiveGroups() {
+      return VIEWS[currentView].groups;
+    }
+
+    function fetchSymbol(symbol, start, end) {
+      const rows = (window.SECTOR_DATA?.[symbol] || []).filter((row) => row.date >= start && row.date <= end);
+
+      if (rows.length < 2) throw new Error(`${symbol} 数据不足`);
+
+      const startClose = rows[0].close;
+      const endClose = rows[rows.length - 1].close;
+      const metrics = moneyFlowMetrics(rows);
+      const avgVolume = rows.reduce((sum, row) => sum + row.volume, 0) / rows.length;
+
+      return {
+        symbol,
+        name: getActiveGroups()[symbol].name,
+        color: getActiveGroups()[symbol].color,
+        changePct: ((endClose / startClose) - 1) * 100,
+        netFlow: metrics.netFlow,
+        flowIntensity: metrics.flowIntensity,
+        avgDollarVolume: metrics.avgDollarVolume,
+        cmfProxy: metrics.cmfProxy,
+        lastVolumeRatio: avgVolume ? rows[rows.length - 1].volume / avgVolume : 0,
+        sparkline: rows.map((row) => row.close),
+      };
+    }
+
+    function renderCards(items) {
+      const total = items.length;
+      const byPerf = [...items].sort((a, b) => b.changePct - a.changePct);
+      const byFlow = [...items].sort((a, b) => b.netFlow - a.netFlow);
+      const avg = items.reduce((sum, item) => sum + item.changePct, 0) / total;
+      const positiveCount = items.filter((item) => item.changePct >= 0).length;
+      const inflowCount = items.filter((item) => item.netFlow >= 0).length;
+
+      const cards = [
+        { label: "平均涨幅", value: fmtPct(avg), detail: `${positiveCount} / ${total} 个板块为正收益`, cls: avg >= 0 ? "pos" : "neg" },
+        { label: "最强上涨", value: `${byPerf[0].symbol} ${fmtPct(byPerf[0].changePct)}`, detail: byPerf[0].name, cls: "pos" },
+        { label: "最大流入", value: `${byFlow[0].symbol} ${fmtM(byFlow[0].netFlow)}`, detail: `${inflowCount} / ${total} 个板块呈净流入代理`, cls: byFlow[0].netFlow >= 0 ? "pos" : "neg" },
+        { label: "最大流出", value: `${byFlow[byFlow.length - 1].symbol} ${fmtM(byFlow[byFlow.length - 1].netFlow)}`, detail: byFlow[byFlow.length - 1].name, cls: byFlow[byFlow.length - 1].netFlow >= 0 ? "pos" : "neg" },
+      ];
+
+      document.getElementById("cards").innerHTML = cards.map((card) => `
+        <article class="card">
+          <p>${card.label}</p>
+          <strong class="${card.cls}">${card.value}</strong>
+          <span>${card.detail}</span>
+        </article>
+      `).join("");
+    }
+
+    function syncViewLabels() {
+      const config = VIEWS[currentView];
+      document.getElementById("perfTitle").textContent = config.perfTitle;
+      document.getElementById("flowTitle").textContent = config.flowTitle;
+      document.getElementById("tableTitle").textContent = config.title;
+      document.querySelectorAll(".view-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.view === currentView);
+      });
+    }
+
+    function renderBarChart(id, rows, valueKey, formatter, positiveColor, negativeColor) {
+      const max = Math.max(...rows.map((row) => Math.abs(row[valueKey])), 0.0001);
+      document.getElementById(id).innerHTML = rows.map((row) => {
+        const width = Math.max(6, Math.abs(row[valueKey]) / max * 100);
+        const color = row[valueKey] >= 0 ? positiveColor : negativeColor;
+        return `
+          <div class="bar-row">
+            <div>${row.symbol}</div>
+            <div class="track"><div class="fill" style="width:${width}%; background:${color}"></div></div>
+            <div class="${row[valueKey] >= 0 ? "pos" : "neg"}">${formatter(row[valueKey])}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTable(rows) {
+      document.getElementById("tbody").innerHTML = rows.map((row) => `
+        <tr>
+          <td><span class="pill" style="background:${row.color}">${row.symbol}</span></td>
+          <td>${row.name}</td>
+          <td class="${row.changePct >= 0 ? "pos" : "neg"}">${fmtPct(row.changePct)}</td>
+          <td class="${row.netFlow >= 0 ? "pos" : "neg"}">${fmtM(row.netFlow)}</td>
+          <td>${fmtPct(row.flowIntensity)}</td>
+          <td>${fmtB(row.avgDollarVolume)}</td>
+          <td>${row.lastVolumeRatio.toFixed(2)}x</td>
+          <td>${spark(row.sparkline, row.color)}</td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadDashboard(start, end) {
+      setStatus("正在刷新板块数据...");
+      document.getElementById("rangeText").textContent = `${start} 至 ${end}`;
+      syncViewLabels();
+
+      try {
+        const ok = [];
+        const failed = [];
+        for (const symbol of Object.keys(getActiveGroups())) {
+          try {
+            ok.push(fetchSymbol(symbol, start, end));
+          } catch (error) {
+            failed.push({ symbol, error });
+          }
+        }
+        if (!ok.length) throw new Error("本地嵌入数据不可用，请确认 `sector_data.js` 与 HTML 在同一目录。");
+
+        const sorted = ok.sort((a, b) => b.changePct - a.changePct);
+        renderCards(sorted);
+        renderBarChart("perfChart", sorted, "changePct", fmtPct, "rgba(88,211,155,0.85)", "rgba(255,123,123,0.85)");
+        renderBarChart("flowChart", [...sorted].sort((a, b) => b.netFlow - a.netFlow), "netFlow", (v) => fmtM(v), "rgba(255,209,102,0.9)", "rgba(124,166,255,0.9)");
+        renderTable(sorted);
+
+        setStatus(`已更新 ${ok.length} 个板块${failed.length ? `，另有 ${failed.length} 个板块数据不足` : ""}。`);
+      } catch (error) {
+        setStatus(error.message || "加载失败", true);
+      }
+    }
+
+    function syncPreset(days) {
+      document.getElementById("startDate").value = daysAgo(days);
+      document.getElementById("endDate").value = daysAgo(0);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      syncPreset(14);
+      document.getElementById("viewSwitch").querySelectorAll("button[data-view]").forEach((button) => {
+        button.addEventListener("click", () => {
+          currentView = button.dataset.view;
+          loadDashboard(document.getElementById("startDate").value, document.getElementById("endDate").value);
+        });
+      });
+      document.querySelectorAll("button[data-days]").forEach((button) => {
+        button.addEventListener("click", () => {
+          syncPreset(Number(button.dataset.days));
+          loadDashboard(document.getElementById("startDate").value, document.getElementById("endDate").value);
+        });
+      });
+
+      document.getElementById("filters").addEventListener("submit", (event) => {
+        event.preventDefault();
+        loadDashboard(document.getElementById("startDate").value, document.getElementById("endDate").value);
+      });
+
+      loadDashboard(document.getElementById("startDate").value, document.getElementById("endDate").value);
+    });
+  </script>
+</body>
+</html>

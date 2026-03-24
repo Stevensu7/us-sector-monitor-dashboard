@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>美股板块轮动看板</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  </head>
+  <body>
+    <div class="page-shell"></div>
+    <main class="layout">
+      <section class="hero-panel">
+        <div>
+          <p class="eyebrow">US Sector Rotation Dashboard</p>
+          <h1>看清美股板块涨幅与资金冷热切换</h1>
+          <p class="hero-copy">
+            基于公开市场的板块 ETF 数据，追踪各板块区间涨跌、资金流向代理指标、成交活跃度与轮动排序。
+          </p>
+        </div>
+        <form id="filters" class="filters-panel">
+          <label>
+            <span>开始日期</span>
+            <input id="startDate" name="start" type="date" required>
+          </label>
+          <label>
+            <span>结束日期</span>
+            <input id="endDate" name="end" type="date" required>
+          </label>
+          <div class="preset-row">
+            <button type="button" class="preset-btn" data-range="30">近30天</button>
+            <button type="button" class="preset-btn" data-range="90">近90天</button>
+            <button type="button" class="preset-btn" data-range="180">近180天</button>
+            <button type="submit" class="refresh-btn">刷新看板</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="summary-grid" id="summaryGrid"></section>
+
+      <section class="content-grid">
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Sector Return</p>
+              <h2>区间涨跌排行</h2>
+            </div>
+            <p id="rangeLabel" class="panel-note"></p>
+          </div>
+          <canvas id="performanceChart"></canvas>
+        </article>
+
+        <article class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Capital Proxy</p>
+              <h2>资金净流入/流出代理</h2>
+            </div>
+            <p class="panel-note">单位：百万美元</p>
+          </div>
+          <canvas id="flowChart"></canvas>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">Cross-Sector Table</p>
+            <h2>板块明细</h2>
+          </div>
+          <p class="disclaimer" id="methodText"></p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ETF</th>
+                <th>板块</th>
+                <th>涨幅</th>
+                <th>净流向代理</th>
+                <th>流向强度</th>
+                <th>日均成交额</th>
+                <th>最新量比</th>
+                <th>价格轨迹</th>
+              </tr>
+            </thead>
+            <tbody id="sectorTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="statusBox" class="status-box">正在加载数据...</section>
+    </main>
+  </body>
+</html>
