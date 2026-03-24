@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import subprocess
+from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 
@@ -50,8 +51,16 @@ def main() -> None:
     for symbol in SYMBOLS:
         payload[symbol] = normalize(fetch_csv(symbol))
 
+    document = {
+        "meta": {
+            "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+            "symbols": SYMBOLS,
+        },
+        "data": payload,
+    }
+
     OUT_FILE.write_text(
-        "window.SECTOR_DATA = " + json.dumps(payload, separators=(",", ":")) + ";\n",
+        "window.SECTOR_DATA = " + json.dumps(document, separators=(",", ":")) + ";\n",
         encoding="utf-8",
     )
     print(f"wrote {OUT_FILE}")

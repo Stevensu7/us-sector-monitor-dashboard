@@ -103,6 +103,26 @@
       box-shadow: 0 0 14px rgba(255, 211, 138, 0.7);
     }
 
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
     .filters {
       display: grid;
       gap: 12px;
@@ -290,7 +310,10 @@
         <p class="eyebrow">Sector Pulse</p>
         <h1>美股板块</h1>
         <p class="copy">一个更轻、更直接的板块看板。聚焦区间涨跌、资金冷热和成交强弱，适合快速看轮动，而不是翻很多标签页。</p>
-        <div class="hero-note">本地数据版 · 双击即可打开</div>
+        <div class="meta-row">
+          <div class="hero-note">本地数据版 · 双击即可打开</div>
+          <div class="meta-pill" id="lastUpdated">最后更新：--</div>
+        </div>
         <div class="view-switch" id="viewSwitch">
           <button type="button" class="view-btn active" data-view="overview">总览</button>
           <button type="button" class="view-btn" data-view="detail">细分</button>
@@ -445,6 +468,20 @@
       el.style.color = isError ? "#ffd0d0" : "#9eb2d2";
     }
 
+    function formatUpdatedAt(value) {
+      if (!value) return "--";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      });
+    }
+
     function spark(values, color) {
       const min = Math.min(...values);
       const max = Math.max(...values);
@@ -487,8 +524,12 @@
       return VIEWS[currentView].groups;
     }
 
+    function getDataset() {
+      return window.SECTOR_DATA?.data || {};
+    }
+
     function fetchSymbol(symbol, start, end) {
-      const rows = (window.SECTOR_DATA?.[symbol] || []).filter((row) => row.date >= start && row.date <= end);
+      const rows = (getDataset()[symbol] || []).filter((row) => row.date >= start && row.date <= end);
 
       if (rows.length < 2) throw new Error(`${symbol} 数据不足`);
 
@@ -610,6 +651,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("lastUpdated").textContent = `最后更新：${formatUpdatedAt(window.SECTOR_DATA?.meta?.updated_at)}`;
       syncPreset(14);
       document.getElementById("viewSwitch").querySelectorAll("button[data-view]").forEach((button) => {
         button.addEventListener("click", () => {
