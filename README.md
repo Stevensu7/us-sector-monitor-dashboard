@@ -29,6 +29,12 @@ python app.py
 - 线上静态部署入口使用 `index.html`
 - 本项目已适配直接部署到 GitHub Pages
 
+## 自动更新
+
+- 仓库已包含 GitHub Actions 定时任务
+- 默认每天自动刷新一次嵌入数据并推送到仓库
+- 你也可以在 GitHub Actions 页面手动运行 `Update sector data`
+
 ## 数据说明
 
 - 数据源：`yfinance`
