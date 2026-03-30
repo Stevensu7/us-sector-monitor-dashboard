@@ -14,15 +14,31 @@ SYMBOLS = OVERVIEW_SYMBOLS + DETAIL_SYMBOLS
 OUT_FILE = Path(__file__).with_name("sector_data.js")
 
 
+def load_existing_data() -> dict[str, list[dict[str, float | str]]]:
+    if not OUT_FILE.exists():
+        return {}
+
+    text = OUT_FILE.read_text(encoding="utf-8")
+    payload = json.loads(text.split("=", 1)[1].rsplit(";", 1)[0])
+    if isinstance(payload, dict) and "data" in payload:
+        return payload["data"]
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
 def fetch_csv(symbol: str) -> list[dict[str, str]]:
     url = f"https://stooq.com/q/d/l/?s={symbol.lower()}.us&i=d"
-    result = subprocess.run(
-        ["curl", "-k", "-L", url],
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=True,
-    )
+    try:
+        result = subprocess.run(
+            ["curl", "-k", "-L", url],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        )
+    except subprocess.SubprocessError:
+        return []
     reader = csv.DictReader(StringIO(result.stdout))
     return list(reader)
 
@@ -47,14 +63,32 @@ def normalize(rows: list[dict[str, str]]) -> list[dict[str, float | str]]:
 
 
 def main() -> None:
+    existing = load_existing_data()
     payload: dict[str, list[dict[str, float | str]]] = {}
+    reused_symbols: list[str] = []
+
     for symbol in SYMBOLS:
-        payload[symbol] = normalize(fetch_csv(symbol))
+        fresh_rows = normalize(fetch_csv(symbol))
+        if fresh_rows:
+            payload[symbol] = fresh_rows
+            continue
+
+        cached_rows = existing.get(symbol, [])
+        if cached_rows:
+            payload[symbol] = cached_rows
+            reused_symbols.append(symbol)
+            continue
+
+        payload[symbol] = []
+
+    if not any(payload.values()):
+        raise RuntimeError("No sector data fetched and no cached data available")
 
     document = {
         "meta": {
             "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
             "symbols": SYMBOLS,
+            "reused_symbols": reused_symbols,
         },
         "data": payload,
     }
