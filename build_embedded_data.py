@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import csv
 import json
-import subprocess
 from datetime import datetime, timezone
-from io import StringIO
 from pathlib import Path
+
+import yfinance as yf
 
 
 OVERVIEW_SYMBOLS = ["XLC", "XLY", "XLP", "XLE", "XLF", "XLV", "XLI", "XLB", "XLRE", "XLK", "XLU"]
@@ -27,62 +26,63 @@ def load_existing_data() -> dict[str, list[dict[str, float | str]]]:
     return {}
 
 
-def fetch_csv(symbol: str) -> list[dict[str, str]]:
-    url = f"https://stooq.com/q/d/l/?s={symbol.lower()}.us&i=d"
+def fetch_history(symbol: str, existing_rows: list[dict]) -> list[dict[str, float | str]]:
+    """
+    Fetch latest history for symbol via yfinance.
+    If yfinance fails, fall back to existing cached rows.
+    """
     try:
-        result = subprocess.run(
-            ["curl", "-k", "-L", url],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=True,
-        )
-    except subprocess.SubprocessError:
-        return []
-    reader = csv.DictReader(StringIO(result.stdout))
-    return list(reader)
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period="2y", auto_adjust=True)
+    except Exception:
+        return existing_rows
 
+    if hist.empty:
+        return existing_rows
 
-def normalize(rows: list[dict[str, str]]) -> list[dict[str, float | str]]:
-    cleaned: list[dict[str, float | str]] = []
-    for row in rows:
+    rows: list[dict[str, float | str]] = []
+    for date, row in hist.iterrows():
+        date_str = date.strftime("%Y-%m-%d")
+        # Skip if this date is already in existing data and is the last entry
+        if existing_rows and date_str == existing_rows[-1].get("date"):
+            continue
         try:
-            cleaned.append(
-                {
-                    "date": row["Date"],
-                    "open": round(float(row["Open"]), 4),
-                    "high": round(float(row["High"]), 4),
-                    "low": round(float(row["Low"]), 4),
-                    "close": round(float(row["Close"]), 4),
-                    "volume": round(float(row["Volume"]), 4),
-                }
-            )
+            rows.append({
+                "date": date_str,
+                "open": round(float(row["Open"]), 4),
+                "high": round(float(row["High"]), 4),
+                "low": round(float(row["Low"]), 4),
+                "close": round(float(row["Close"]), 4),
+                "volume": round(float(row["Volume"]), 4),
+            })
         except (KeyError, TypeError, ValueError):
             continue
-    return cleaned
+
+    return rows
 
 
 def main() -> None:
     existing = load_existing_data()
     payload: dict[str, list[dict[str, float | str]]] = {}
     reused_symbols: list[str] = []
+    fetched_count = 0
 
     for symbol in SYMBOLS:
-        fresh_rows = normalize(fetch_csv(symbol))
+        existing_rows = existing.get(symbol, [])
+        fresh_rows = fetch_history(symbol, existing_rows)
+
         if fresh_rows:
             payload[symbol] = fresh_rows
-            continue
-
-        cached_rows = existing.get(symbol, [])
-        if cached_rows:
-            payload[symbol] = cached_rows
+            if not fresh_rows or (existing_rows and fresh_rows[-1]["date"] == existing_rows[-1]["date"]):
+                reused_symbols.append(symbol)
+            else:
+                fetched_count += 1
+        else:
+            payload[symbol] = existing_rows
             reused_symbols.append(symbol)
-            continue
-
-        payload[symbol] = []
 
     if not any(payload.values()):
-        raise RuntimeError("No sector data fetched and no cached data available")
+        raise RuntimeError("No sector data available (yfinance failed and no cached data)")
 
     document = {
         "meta": {
@@ -97,7 +97,7 @@ def main() -> None:
         "window.SECTOR_DATA = " + json.dumps(document, separators=(",", ":")) + ";\n",
         encoding="utf-8",
     )
-    print(f"wrote {OUT_FILE}")
+    print(f"wrote {OUT_FILE}  (fresh={fetched_count}, reused={len(reused_symbols)})")
 
 
 if __name__ == "__main__":
