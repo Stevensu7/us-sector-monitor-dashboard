@@ -26,26 +26,24 @@ def load_existing_data() -> dict[str, list[dict[str, float | str]]]:
     return {}
 
 
-def fetch_history(symbol: str, existing_rows: list[dict]) -> list[dict[str, float | str]]:
+def fetch_history(symbol: str) -> tuple[list[dict[str, float | str]], bool]:
     """
-    Fetch latest history for symbol via yfinance.
-    If yfinance fails, fall back to existing cached rows.
+    Fetch 2y history for symbol via yfinance.
+    Returns (rows, was_fetched) where was_fetched is True if yfinance succeeded.
+    Falls back to [] on failure — caller decides what to use.
     """
     try:
         ticker = yf.Ticker(symbol)
         hist = ticker.history(period="2y", auto_adjust=True)
     except Exception:
-        return existing_rows
+        return [], False
 
     if hist.empty:
-        return existing_rows
+        return [], False
 
     rows: list[dict[str, float | str]] = []
     for date, row in hist.iterrows():
         date_str = date.strftime("%Y-%m-%d")
-        # Skip if this date is already in existing data and is the last entry
-        if existing_rows and date_str == existing_rows[-1].get("date"):
-            continue
         try:
             rows.append({
                 "date": date_str,
@@ -58,7 +56,7 @@ def fetch_history(symbol: str, existing_rows: list[dict]) -> list[dict[str, floa
         except (KeyError, TypeError, ValueError):
             continue
 
-    return rows
+    return rows, True
 
 
 def main() -> None:
@@ -68,18 +66,20 @@ def main() -> None:
     fetched_count = 0
 
     for symbol in SYMBOLS:
+        fresh_rows, was_fetched = fetch_history(symbol)
         existing_rows = existing.get(symbol, [])
-        fresh_rows = fetch_history(symbol, existing_rows)
 
-        if fresh_rows:
+        if was_fetched and fresh_rows:
+            # yfinance succeeded — use fresh data (deduped, sorted by date)
             payload[symbol] = fresh_rows
-            if not fresh_rows or (existing_rows and fresh_rows[-1]["date"] == existing_rows[-1]["date"]):
-                reused_symbols.append(symbol)
-            else:
-                fetched_count += 1
-        else:
+            fetched_count += 1
+        elif existing_rows:
+            # yfinance failed or returned empty — fall back to cache
             payload[symbol] = existing_rows
             reused_symbols.append(symbol)
+        else:
+            # No fresh data and no cache — store empty list
+            payload[symbol] = []
 
     if not any(payload.values()):
         raise RuntimeError("No sector data available (yfinance failed and no cached data)")
