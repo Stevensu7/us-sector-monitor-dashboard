@@ -29,7 +29,13 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Rebuild embedded data
-        run: python build_embedded_data.py
+        run: |
+          python build_embedded_data.py
+          SIZE=$(wc -c < sector_data.js)
+          echo "sector_data.js size: $SIZE bytes"
+          if [ "$SIZE" -gt 5000000 ]; then
+            echo "WARNING: file too large ($SIZE bytes), may cause push failure"
+          fi
 
       - name: Sync standalone entrypoint
         run: cp sector_dashboard_standalone.html index.html
@@ -39,6 +45,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sector_data.js index.html
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          echo "Files changed:"
+          git diff --cached --stat
           git commit -m "Update sector data"
-          git push
+          git push --force-with-lease
