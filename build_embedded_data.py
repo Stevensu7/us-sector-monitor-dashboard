@@ -28,13 +28,13 @@ def load_existing_data() -> dict[str, list[dict[str, float | str]]]:
 
 def fetch_history(symbol: str) -> tuple[list[dict[str, float | str]], bool]:
     """
-    Fetch 1y history for symbol via yfinance.
+    Fetch 6mo history for symbol via yfinance.
     Returns (rows, was_fetched) where was_fetched is True if yfinance succeeded.
     Falls back to [] on failure — caller decides what to use.
     """
     try:
         ticker = yf.Ticker(symbol)
-        hist = ticker.history(period="1y", auto_adjust=True)
+        hist = ticker.history(period="6mo", auto_adjust=True)
     except Exception:
         return [], False
 
